@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+
+	<style>
+		section#main {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+		#image-input {
+			display: none;
+		}
+		.input-label #upload-svg path {
+			transition: all 0.5s ease;
+		}
+		.input-label:hover #upload-svg path {
+			d: path('M34 38H41L51 46H3L13 38H20M27 41 37 31H31V15H23V31H17Z');
+		}
+		.input-label {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 500px;
+			height: 300px;
+			border: 4px #112 dashed;
+			border-radius: 5px;
+			perspective: 100px;
+		}
+	</style>
+</head>
+<body>
+	<section id="main">
+		<label for="image-input" class="input-label">
+			<div class="input-box">
+				<input type="file" id="image-input" >
+				<svg id='upload-svg' width="100" height="100" viewBox="0 0 55 55" stroke-width="2" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M26.5 36H41l10 12H3l10-12h14.5m-.5-3 10-10h-6V7h-8v16h-6z" stroke="#000" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+			</div>
+		</label>
+			<canvas id="canvas" style="image-rendering: pixelated;"></canvas>
+		<pre id="result-ascii"></pre>
+	</section>
+</body>
+</html>
+
+<script>
+	Element.prototype.hide = function() {
+		this.style.display = 'none';
+	};
+	Element.prototype.show = function(display = 'block') {
+		this.style.display = display;
+	};
+	const symbolsArray = [];
+	const symbolW = 9;
+	const symbolH = 16;
+
+	function createASCIIsymbols(canvas) {
+		const ascii = '!@O#$S?oi*`.:"\'()vV^<>-~_+=|/\\ ░▒'; 
+
+		ctx.font = '16px monospace';
+		ctx.fillStyle = 'black';    
+
+		ctx.fillText(ascii, 0, 12);
+
+		for(let i = 0; i < ascii.length; i++) {
+			const symbolData = ctx.getImageData(i * 8.8+1, 0, symbolW, symbolH);
+			symbolData.symbol = ascii[i]
+			symbolsArray.push(symbolData);
+		}
+		console.log(symbolsArray)
+	}
+
+	function imageGrayFilter(imageData) {
+		const data = imageData.data;
+		const len = data.length;
+		for(let i = 0; i < len; i += 4) {
+			const gray = (data[i] + data[i + 1] + data[i + 2]) * 0.33;
+			data[i] = gray;
+			data[i + 1] = gray;
+			data[i + 2] = gray;
+			data[i + 3] = 255;
+		}
+		return imageData;
+	}
+
+	function multiplyPixels(data1, data2) {
+		const len = data1.length;
+		let result = 0;
+		for(let i = 2; i < len; i += 4) {
+			result += (data1[i] - 128) * -(data2[i+1] - 128); 
+		}
+		return result;
+	}
+
+	function asciiConverterImage(imageData) {
+		const data = imageData.data;
+		const w = imageData.width;
+		const h = imageData.height;
+
+		for (let i = 0; i < h; i += symbolH) {
+			for (let j = 0; j < w; j += symbolW) {
+				const sliceData = ctx.getImageData(j, i, symbolW, symbolH);
+				let max = [-1, 0]
+				for (let symbol = 0; symbol < symbolsArray.length; symbol++) {
+					const symbolData = symbolsArray[symbol];
+					const a = multiplyPixels(sliceData.data, symbolData.data);
+					if(a > max[1] || max[0] < 0) {
+						max[1] = a;
+						max[0] = symbol;
+					}
+				}
+				if(max[0] !== -1) {
+					ctx.putImageData(symbolsArray[max[0]], j, i);
+				}
+			}
+		}
+	}
+	function asciiConverterText(imageData) {
+		const data = imageData.data;
+		const w = imageData.width;
+		const h = imageData.height;
+		let resultText = '';
+
+		for (let i = 0; i < h; i += symbolH) {
+			for (let j = 0; j < w; j += symbolW) {
+				const sliceData = ctx.getImageData(j, i, symbolW, symbolH);
+				let max = [-1, 0]
+				for (let symbol = 0; symbol < symbolsArray.length; symbol++) {
+					const symbolData = symbolsArray[symbol];
+					const a = multiplyPixels(sliceData.data, symbolData.data);
+					if(a > max[1] || max[0] < 0) {
+						max[1] = a;
+						max[0] = symbol;
+					}
+				}
+				if(max[0] !== -1) {
+					resultText += symbolsArray[max[0]].symbol;
+				}
+			}
+			resultText += '\n';
+		}
+		resultPre.innerText += resultText;
+	}
+
+
+	const canvas = document.getElementById('canvas');
+	const ctx = canvas.getContext('2d');
+	createASCIIsymbols(canvas);
+
+	const inputLabel = document.querySelector('.input-label');
+	const inputBox = inputLabel.querySelector('.input-box');
+	const input = inputLabel.querySelector('#image-input');
+
+	const resultPre = document.querySelector('pre#result-ascii');
+
+	input.addEventListener('change', (e) => {
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const img = new Image();
+			img.onload = (e) => {
+
+				inputLabel.hide();
+				canvas.hide();
+				canvas.width = img.width;
+				canvas.height = img.height; 
+				ctx.drawImage(img, 0, 0);
+				const data = ctx.getImageData(0, 0, img.width, img.height);
+
+				const newData = imageGrayFilter(data);
+				ctx.putImageData(newData, 0, 0);
+				asciiConverterText(newData);
+
+			}
+			img.src = e.target.result
+		}
+		reader.readAsDataURL(e.target.files[0]);
+	})
+
+
+</script>
