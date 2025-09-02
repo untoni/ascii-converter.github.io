@@ -6,6 +6,9 @@
 	<title></title>
 
 	<style>
+		html {
+			Access-Control-Allow-Origin: *;
+		}
 		section#main {
 			display: flex;
 			flex-direction: column;
@@ -57,7 +60,7 @@
 		this.style.display = display;
 	};
 	const symbolsArray = [];
-	const symbolW = 8.8;
+	const symbolW = 8;
 	const symbolH = 16;
 
 	function createASCIIsymbols(canvas) {
@@ -73,7 +76,6 @@
 		for(let i = 0; i < ascii.length; i++) {
 			const symbolData = ctx.getImageData(i * 8.8+1, 0, symbolW, symbolH);
 			const sum = 1 - imageSum(symbolData, 3);
-			console.log(sum)
 			if(sum > maxSum) {
 				maxSum = sum;
 			}
@@ -188,28 +190,56 @@
 
 	const resultPre = document.querySelector('pre#result-ascii');
 
-	input.addEventListener('change', (e) => {
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			const img = new Image();
-			img.onload = (e) => {
-
-				inputLabel.hide();
-				canvas.hide();
-				canvas.width = img.width;
-				canvas.height = img.height; 
-				ctx.drawImage(img, 0, 0);
-				const data = ctx.getImageData(0, 0, img.width, img.height);
-
-				const newData = imageGrayFilter(data);
-				ctx.putImageData(newData, 0, 0);
-				asciiConverterText(newData);
-
-			}
-			img.src = e.target.result
+	document.addEventListener('drop', (e) => {
+		e.preventDefault();
+		const item = e.dataTransfer.items[0];
+		if (item.kind === 'file') {
+			const file = item.getAsFile();
+			handleImage(URL.createObjectURL(file));
+		} else if (item.kind === 'string' && item.type === 'text/plain') {
+			item.getAsString((url) => {
+				handleImage(url);
+			})
 		}
-		reader.readAsDataURL(e.target.files[0]);
+	});
+	window.addEventListener("dragover", (e) => {
+		e.preventDefault();
+	});
+	window.addEventListener("drop", (e) => {
+		e.preventDefault();
+	});
+
+	input.addEventListener('change', (e) => {
+		const file = e.target.files[0]
+		handleImage(URL.createObjectURL(file))
+	});
+
+	document.addEventListener('paste', (e) => {
+  		let item = (event.clipboardData || event.originalEvent.clipboardData).items[0];
+  		item.getAsString((url) => {
+  			console.log(url)
+			handleImage(url);
+		})
 	})
+
+	function handleImage(src) {
+		const img = new Image();
+		img.crossOrigin = "anonymous";
+		img.onload = (e) => {
+			inputLabel.hide();
+			canvas.hide();
+			canvas.width = img.width;
+			canvas.height = img.height; 
+			ctx.drawImage(img, 0, 0);
+			const data = ctx.getImageData(0, 0, img.width, img.height);
+
+			const newData = imageGrayFilter(data);
+			ctx.putImageData(newData, 0, 0);
+			asciiConverterText(newData);
+
+		}
+		img.src = src
+	}
 
 
 </script>
