@@ -57,21 +57,33 @@
 		this.style.display = display;
 	};
 	const symbolsArray = [];
-	const symbolW = 9;
+	const symbolW = 8.8;
 	const symbolH = 16;
 
 	function createASCIIsymbols(canvas) {
 		const ascii = '!@O#$S?oi*`.:"\'()vV^<>-~_+=|/\\ ░▒'; 
 
+		canvas.width = ascii.length * symbolW;
 		ctx.font = '16px monospace';
 		ctx.fillStyle = 'black';    
 
 		ctx.fillText(ascii, 0, 12);
 
+		let maxSum = 0
 		for(let i = 0; i < ascii.length; i++) {
 			const symbolData = ctx.getImageData(i * 8.8+1, 0, symbolW, symbolH);
+			const sum = 1 - imageSum(symbolData, 3);
+			console.log(sum)
+			if(sum > maxSum) {
+				maxSum = sum;
+			}
+			symbolData.sum = sum;
 			symbolData.symbol = ascii[i]
 			symbolsArray.push(symbolData);
+		}
+
+		for(let i = 0; i < symbolsArray.length; i++) {
+			symbolsArray[i].sum /= maxSum;
 		}
 		console.log(symbolsArray)
 	}
@@ -87,6 +99,14 @@
 			data[i + 3] = 255;
 		}
 		return imageData;
+	}
+	function imageSum(imageData, n) {
+		const data = imageData.data
+		let result = 0;
+		for (let i = n; i < data.length; i += 4) {
+			result += (255 - data[i]);
+		}
+		return result / (data.length * 64) 
 	}
 
 	function multiplyPixels(data1, data2) {
@@ -106,11 +126,14 @@
 		for (let i = 0; i < h; i += symbolH) {
 			for (let j = 0; j < w; j += symbolW) {
 				const sliceData = ctx.getImageData(j, i, symbolW, symbolH);
+				const sum = imageSum(sliceData, 0);
 				let max = [-1, 0]
 				for (let symbol = 0; symbol < symbolsArray.length; symbol++) {
 					const symbolData = symbolsArray[symbol];
-					const a = multiplyPixels(sliceData.data, symbolData.data);
+					let a = multiplyPixels(sliceData.data, symbolData.data);
+					a += (1 - Math.abs(symbolData.sum - sum)) * 100000;					
 					if(a > max[1] || max[0] < 0) {
+						console.log(a)
 						max[1] = a;
 						max[0] = symbol;
 					}
@@ -130,16 +153,21 @@
 		for (let i = 0; i < h; i += symbolH) {
 			for (let j = 0; j < w; j += symbolW) {
 				const sliceData = ctx.getImageData(j, i, symbolW, symbolH);
+				const sum = imageSum(sliceData, 0);
 				let max = [-1, 0]
+
 				for (let symbol = 0; symbol < symbolsArray.length; symbol++) {
 					const symbolData = symbolsArray[symbol];
-					const a = multiplyPixels(sliceData.data, symbolData.data);
+					let a = multiplyPixels(sliceData.data, symbolData.data);
+					a *= (1 - Math.abs(symbolData.sum - sum));	
+
 					if(a > max[1] || max[0] < 0) {
 						max[1] = a;
 						max[0] = symbol;
 					}
 				}
 				if(max[0] !== -1) {
+					if(i < 20 && j < 30) console.log(Math.abs(symbolsArray[max[0]].sum - sum), symbolsArray[max[0]].sum, sum)
 					resultText += symbolsArray[max[0]].symbol;
 				}
 			}
@@ -151,6 +179,7 @@
 
 	const canvas = document.getElementById('canvas');
 	const ctx = canvas.getContext('2d');
+	// canvas.hide();
 	createASCIIsymbols(canvas);
 
 	const inputLabel = document.querySelector('.input-label');
