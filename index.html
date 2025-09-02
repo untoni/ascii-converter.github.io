@@ -216,10 +216,21 @@
 
 	document.addEventListener('paste', (e) => {
   		let item = (event.clipboardData || event.originalEvent.clipboardData).items[0];
-  		item.getAsString((url) => {
-  			console.log(url)
-			handleImage(url);
-		})
+
+    	if (item.kind === "file") {
+    		const file = item.getAsFile();
+    		const url = URL.createObjectURL(file);
+    		drawImageOnCanvas(url);
+    	}
+
+  		if (item.kind === "string" && item.type === "text/html") {
+      		item.getAsString((html) => {
+      			const match = html.match(/<img[^>]+src="([^">]+)"/);
+      			if (match) {
+      				handleImage(match[1]);
+      			}
+      		});
+    	}
 	})
 
 	function handleImage(src) {
