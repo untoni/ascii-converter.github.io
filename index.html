@@ -64,7 +64,7 @@
 	const symbolH = 16;
 
 	function createASCIIsymbols(canvas) {
-		const ascii = '!@O#$S?oi*`.:"\'()vV^<>-~_+=|/\\ ░▒'; 
+		const ascii = '!@%RO#$S?oi*`.:"\'()^v<>=-~_+ʃ|/\\ ░▒'; 
 
 		canvas.width = ascii.length * 8.8;
 		ctx.font = '16px monospace';
@@ -197,6 +197,7 @@
 			const file = item.getAsFile();
 			handleImage(URL.createObjectURL(file));
 		} else if (item.kind === 'string' && item.type === 'text/plain') {
+			console.log(item)
 			item.getAsString((url) => {
 				handleImage(url);
 			})
@@ -214,23 +215,29 @@
 		handleImage(URL.createObjectURL(file))
 	});
 
-	document.addEventListener('paste', (e) => {
-  		let item = (event.clipboardData || event.originalEvent.clipboardData).items[0];
+	document.addEventListener('paste', async (e) => {
+  		let item = e.clipboardData.items[0];
 
-    	if (item.kind === "file") {
-    		const file = item.getAsFile();
-    		const url = URL.createObjectURL(file);
-    		drawImageOnCanvas(url);
-    	}
+    		if (item.kind === "file") {
+    			const file = item.getAsFile();
+			//console.log(file)
+    			const url = URL.createObjectURL(file);
+    			drawImageOnCanvas(url);
+    		}
 
   		if (item.kind === "string" && item.type === "text/html") {
-      		item.getAsString((html) => {
-      			const match = html.match(/<img[^>]+src="([^">]+)"/);
-      			if (match) {
-      				handleImage(match[1]);
-      			}
-      		});
-    	}
+      			item.getAsString((html) => {
+      				const match = html.match(/<img[^>]+src="([^">]+)"/);
+      				if (match) {
+					//console.log(match)
+      					handleImage(match[1]);
+      				}
+      			});
+		}
+		if (item.kind === "string" && item.type === "text/plain") {
+			console.log(item);
+			item.getAsString((i) => console.log(i));
+		}
 	})
 
 	function handleImage(src) {
