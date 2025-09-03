@@ -169,7 +169,6 @@
 					}
 				}
 				if(max[0] !== -1) {
-					if(i < 20 && j < 30) console.log(Math.abs(symbolsArray[max[0]].sum - sum), symbolsArray[max[0]].sum, sum)
 					resultText += symbolsArray[max[0]].symbol;
 				}
 			}
@@ -197,7 +196,6 @@
 			const file = item.getAsFile();
 			handleImage(URL.createObjectURL(file));
 		} else if (item.kind === 'string' && item.type === 'text/plain') {
-			console.log(item)
 			item.getAsString((url) => {
 				handleImage(url);
 			})
@@ -220,9 +218,8 @@
 
     		if (item.kind === "file") {
     			const file = item.getAsFile();
-			//console.log(file)
     			const url = URL.createObjectURL(file);
-    			drawImageOnCanvas(url);
+    			handleImage(url);
     		}
 
   		if (item.kind === "string" && item.type === "text/html") {
@@ -235,8 +232,9 @@
       			});
 		}
 		if (item.kind === "string" && item.type === "text/plain") {
-			console.log(item);
-			item.getAsString((i) => console.log(i));
+			item.getAsString((url) => {
+				handleImage(url);
+			})
 		}
 	})
 
